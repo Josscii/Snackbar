@@ -1,4 +1,4 @@
-### Missing HUD/Toast/Snackbar in iOS
+### The Missing HUD/Toast/Snackbar in iOS
 
 #### How to Implement It in SwiftUI
 
