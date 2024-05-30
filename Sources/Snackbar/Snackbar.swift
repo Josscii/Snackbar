@@ -1,14 +1,29 @@
 import SwiftUI
 
-public class SnackbarState: ObservableObject {
-    public struct SnackbarItem: Equatable {
-        var id = UUID().uuidString
-        var text: LocalizedStringKey
-        var duration: Double
-        var showProgress: Bool
-        var showCloseButton: Bool
-    }
+public struct SnackbarItemAction {
+    var title: String
+    var onTap: () -> Void
 
+    public init(title: String, onTap: @escaping () -> Void) {
+        self.title = title
+        self.onTap = onTap
+    }
+}
+
+public struct SnackbarItem: Equatable {
+    var id = UUID().uuidString
+    var text: LocalizedStringKey
+    var duration: Double
+    var showProgress: Bool
+    var showCloseButton: Bool
+    var action: SnackbarItemAction?
+
+    public static func == (lhs: SnackbarItem, rhs: SnackbarItem) -> Bool {
+        lhs.id == rhs.id
+    }
+}
+
+public class SnackbarState: ObservableObject {
     @Published
     var pendingItems: [SnackbarItem] = []
 
@@ -21,10 +36,11 @@ public class SnackbarState: ObservableObject {
         text: LocalizedStringKey,
         duration: Double = 1.5,
         showProgress: Bool = false,
-        showCloseButton: Bool = false)
+        showCloseButton: Bool = false,
+        action: SnackbarItemAction? = nil)
     {
         withAnimation {
-            let item = SnackbarItem(text: text, duration: duration, showProgress: showProgress, showCloseButton: showCloseButton)
+            let item = SnackbarItem(text: text, duration: duration, showProgress: showProgress, showCloseButton: showCloseButton, action: action)
             pendingItems = [item]
         }
     }
@@ -64,9 +80,17 @@ struct Snackbar: View {
                 Text(item.text)
                     .foregroundStyle(foregorundColor)
 
-                if item.showCloseButton {
-                    Spacer()
+                Spacer()
 
+                if let action = item.action {
+                    Button(action.title) {
+                        action.onTap()
+                        state.hide(item: item)
+                    }
+                    .tint(foregorundColor)
+                }
+
+                if item.showCloseButton {
                     Button {
                         state.hide(item: item)
                     } label: {
