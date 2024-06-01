@@ -1,10 +1,10 @@
 import SwiftUI
 
 public struct SnackbarItemAction {
-    var title: String
+    var title: LocalizedStringKey
     var onTap: () -> Void
 
-    public init(title: String, onTap: @escaping () -> Void) {
+    public init(title: LocalizedStringKey, onTap: @escaping () -> Void) {
         self.title = title
         self.onTap = onTap
     }
