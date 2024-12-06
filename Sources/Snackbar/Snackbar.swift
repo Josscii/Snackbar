@@ -29,6 +29,7 @@ public class SnackbarState: ObservableObject {
 
     public static let shared = SnackbarState()
     public static let sheet = SnackbarState()
+    public static let fullScreenCover = SnackbarState()
 
     public init() {}
 
@@ -154,14 +155,14 @@ public extension View {
     func fullScreenCoverWithSnackbar<Content>(isPresented: Binding<Bool>, onDismiss: (() -> Void)? = nil, @ViewBuilder content: @escaping () -> Content) -> some View where Content: View {
         fullScreenCover(isPresented: isPresented, onDismiss: onDismiss) {
             content()
-                .useSnackbar(.sheet)
+                .useSnackbar(.fullScreenCover)
         }
     }
 
     func fullScreenCoverWithSnackbar<Item, Content>(item: Binding<Item?>, onDismiss: (() -> Void)? = nil, @ViewBuilder content: @escaping (Item) -> Content) -> some View where Item: Identifiable, Content: View {
         fullScreenCover(item: item, onDismiss: onDismiss) {
             content($0)
-                .useSnackbar(.sheet)
+                .useSnackbar(.fullScreenCover)
         }
     }
 }
