@@ -16,6 +16,7 @@ public struct SnackbarItem: Equatable {
     var duration: Double
     var showProgress: Bool
     var showCloseButton: Bool
+    var padding: CGFloat
     var action: SnackbarItemAction?
 
     public static func == (lhs: SnackbarItem, rhs: SnackbarItem) -> Bool {
@@ -38,10 +39,11 @@ public class SnackbarState: ObservableObject {
         duration: Double = 1.5,
         showProgress: Bool = false,
         showCloseButton: Bool = false,
+        padding: CGFloat = 32,
         action: SnackbarItemAction? = nil)
     {
         withAnimation {
-            let item = SnackbarItem(text: text, duration: duration, showProgress: showProgress, showCloseButton: showCloseButton, action: action)
+            let item = SnackbarItem(text: text, duration: duration, showProgress: showProgress, showCloseButton: showCloseButton, padding: padding, action: action)
             pendingItems = [item]
         }
     }
@@ -105,9 +107,7 @@ struct Snackbar: View {
             .background(backgroundColor.shadow(.drop(radius: 6)))
             .clipShape(.rect(cornerRadius: 4))
             .padding()
-            .safeAreaInset(edge: .bottom) {
-                Color.clear.frame(height: 32)
-            }
+            .safeAreaPadding(.bottom, item.padding)
             .transition(.opacity)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
             .onAppear {
@@ -138,28 +138,28 @@ public extension View {
             .environmentObject(state)
     }
 
-    func sheetWithSnackbar<Content>(isPresented: Binding<Bool>, onDismiss: (() -> Void)? = nil, @ViewBuilder content: @escaping () -> Content) -> some View where Content: View {
+    func sheetWithSnackbar<Content: View>(isPresented: Binding<Bool>, onDismiss: (() -> Void)? = nil, @ViewBuilder content: @escaping () -> Content) -> some View {
         sheet(isPresented: isPresented, onDismiss: onDismiss) {
             content()
                 .useSnackbar(.sheet)
         }
     }
 
-    func sheetWithSnackbar<Item, Content>(item: Binding<Item?>, onDismiss: (() -> Void)? = nil, @ViewBuilder content: @escaping (Item) -> Content) -> some View where Item: Identifiable, Content: View {
+    func sheetWithSnackbar<Item: Identifiable, Content: View>(item: Binding<Item?>, onDismiss: (() -> Void)? = nil, @ViewBuilder content: @escaping (Item) -> Content) -> some View {
         sheet(item: item, onDismiss: onDismiss) {
             content($0)
                 .useSnackbar(.sheet)
         }
     }
 
-    func fullScreenCoverWithSnackbar<Content>(isPresented: Binding<Bool>, onDismiss: (() -> Void)? = nil, @ViewBuilder content: @escaping () -> Content) -> some View where Content: View {
+    func fullScreenCoverWithSnackbar<Content: View>(isPresented: Binding<Bool>, onDismiss: (() -> Void)? = nil, @ViewBuilder content: @escaping () -> Content) -> some View {
         fullScreenCover(isPresented: isPresented, onDismiss: onDismiss) {
             content()
                 .useSnackbar(.fullScreenCover)
         }
     }
 
-    func fullScreenCoverWithSnackbar<Item, Content>(item: Binding<Item?>, onDismiss: (() -> Void)? = nil, @ViewBuilder content: @escaping (Item) -> Content) -> some View where Item: Identifiable, Content: View {
+    func fullScreenCoverWithSnackbar<Item: Identifiable, Content: View>(item: Binding<Item?>, onDismiss: (() -> Void)? = nil, @ViewBuilder content: @escaping (Item) -> Content) -> some View {
         fullScreenCover(item: item, onDismiss: onDismiss) {
             content($0)
                 .useSnackbar(.fullScreenCover)
