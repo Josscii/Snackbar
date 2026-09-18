@@ -1,5 +1,9 @@
 import SwiftUI
 
+#if canImport(UIKit) && canImport(SwiftUIIntrospect)
+import SwiftUIIntrospect
+#endif
+
 public struct SnackbarItemAction {
     var title: LocalizedStringKey
     var onTap: () -> Void
@@ -16,7 +20,7 @@ public struct SnackbarItem: Equatable {
     var duration: Double
     var showProgress: Bool
     var showCloseButton: Bool
-    var padding: CGFloat
+    var bottomInset: CGFloat?
     var action: SnackbarItemAction?
 
     public static func == (lhs: SnackbarItem, rhs: SnackbarItem) -> Bool {
@@ -39,11 +43,11 @@ public class SnackbarState: ObservableObject {
         duration: Double = 1.5,
         showProgress: Bool = false,
         showCloseButton: Bool = false,
-        padding: CGFloat = 32,
+        bottomInset: CGFloat? = nil,
         action: SnackbarItemAction? = nil)
     {
         withAnimation {
-            let item = SnackbarItem(text: text, duration: duration, showProgress: showProgress, showCloseButton: showCloseButton, padding: padding, action: action)
+            let item = SnackbarItem(text: text, duration: duration, showProgress: showProgress, showCloseButton: showCloseButton, bottomInset: bottomInset, action: action)
             pendingItems = [item]
         }
     }
@@ -72,53 +76,76 @@ struct Snackbar: View {
         colorScheme == .dark ? .white : Color(red: 38/255.0, green: 38/255.0, blue: 38/255.0)
     }
 
+    @State private var childSafeAreaBottomInset: CGFloat = 0
+
     var body: some View {
-        if let item = state.pendingItems.first {
-            HStack(spacing: 8) {
-                if item.showProgress {
-                    ProgressView()
+        Group {
+            if let item = state.pendingItems.first {
+                HStack(spacing: 8) {
+                    if item.showProgress {
+                        ProgressView()
+                            .tint(foregorundColor)
+                    }
+
+                    Text(item.text)
+                        .foregroundStyle(foregorundColor)
+
+                    Spacer()
+
+                    if let action = item.action {
+                        Button(action.title) {
+                            action.onTap()
+                            state.hide(item: item)
+                        }
                         .tint(foregorundColor)
-                }
-
-                Text(item.text)
-                    .foregroundStyle(foregorundColor)
-
-                Spacer()
-
-                if let action = item.action {
-                    Button(action.title) {
-                        action.onTap()
-                        state.hide(item: item)
                     }
-                    .tint(foregorundColor)
-                }
 
-                if item.showCloseButton {
-                    Button {
-                        state.hide(item: item)
-                    } label: {
-                        Image(systemName: "xmark")
+                    if item.showCloseButton {
+                        Button {
+                            state.hide(item: item)
+                        } label: {
+                            Image(systemName: "xmark")
+                        }
+                        .tint(foregorundColor)
                     }
-                    .tint(foregorundColor)
                 }
+                .padding()
+                .frame(maxWidth: 450, alignment: .leading)
+                .background(backgroundColor.shadow(.drop(radius: 6)))
+                .clipShape(.rect(cornerRadius: 4))
+                .padding()
+                .safeAreaPadding(.bottom, item.bottomInset ?? childSafeAreaBottomInset)
+                .transition(.opacity)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                .ignoresSafeArea()
+                .onAppear {
+                    if item.duration > 0 && !item.showProgress {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + item.duration) {
+                            state.hide(item: item)
+                        }
+                    }
+                }
+                .id(item.id)
             }
-            .padding()
-            .frame(maxWidth: 450, alignment: .leading)
-            .background(backgroundColor.shadow(.drop(radius: 6)))
-            .clipShape(.rect(cornerRadius: 4))
-            .padding()
-            .safeAreaPadding(.bottom, item.padding)
-            .transition(.opacity)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-            .onAppear {
-                if item.duration > 0 && !item.showProgress {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + item.duration) {
-                        state.hide(item: item)
-                    }
-                }
-            }
-            .id(item.id)
         }
+#if canImport(UIKit) && canImport(SwiftUIIntrospect)
+        .introspect(.viewController, on: .iOS(.v17...)) { viewController in
+            let tabBarController = viewController as? UITabBarController
+                ?? viewController.tabBarController
+                ?? viewController.children.compactMap { $0 as? UITabBarController }.first
+            guard let safeAreaView = tabBarController?.selectedViewController?.view
+                ?? viewController.view
+            else { return }
+
+            let bottomInset = safeAreaView.safeAreaInsets.bottom
+            guard bottomInset != childSafeAreaBottomInset else { return }
+
+            DispatchQueue.main.async {
+                guard bottomInset != childSafeAreaBottomInset else { return }
+                childSafeAreaBottomInset = bottomInset
+            }
+        }
+#endif
     }
 }
 
