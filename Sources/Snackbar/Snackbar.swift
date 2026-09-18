@@ -130,24 +130,42 @@ struct Snackbar: View {
         }
 #if canImport(UIKit) && canImport(SwiftUIIntrospect)
         .introspect(.viewController, on: .iOS(.v17...)) { viewController in
-            let tabBarController = viewController as? UITabBarController
-                ?? viewController.tabBarController
-                ?? viewController.children.compactMap { $0 as? UITabBarController }.first
-            guard let safeAreaView = tabBarController?.selectedViewController?.view
-                ?? viewController.view
-            else { return }
-
-            let bottomInset = safeAreaView.safeAreaInsets.bottom
-            guard bottomInset != childSafeAreaBottomInset else { return }
-
             DispatchQueue.main.async {
-                guard bottomInset != childSafeAreaBottomInset else { return }
+                let contentViewController = viewController.snackbarContentViewController
+                guard let bottomInset = contentViewController.viewIfLoaded?.safeAreaInsets.bottom,
+                      bottomInset != childSafeAreaBottomInset
+                else { return }
+
                 childSafeAreaBottomInset = bottomInset
             }
         }
 #endif
     }
 }
+
+#if canImport(UIKit) && canImport(SwiftUIIntrospect)
+private extension UIViewController {
+    var snackbarContentViewController: UIViewController {
+        let child: UIViewController?
+        if let tabBarController = self as? UITabBarController {
+            child = tabBarController.selectedViewController
+        } else if let navigationController = self as? UINavigationController {
+            let visible = navigationController.visibleViewController
+            child = visible?.parent === navigationController ? visible : navigationController.topViewController
+        } else {
+            child = children.first { $0.hasVisibleSnackbarContent }
+        }
+
+        guard let child, child.hasVisibleSnackbarContent else { return self }
+        return child.snackbarContentViewController
+    }
+
+    var hasVisibleSnackbarContent: Bool {
+        guard let view = viewIfLoaded else { return false }
+        return view.window != nil && !view.isHidden && view.alpha > 0 && !view.bounds.isEmpty
+    }
+}
+#endif
 
 public struct UseSnackbar: ViewModifier {
     public func body(content: Content) -> some View {
